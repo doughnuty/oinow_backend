@@ -46,3 +46,4 @@ CREATE TABLE IF NOT EXISTS "game_scores" (
 -- ddl-end --
 -- ALTER TABLE public."Score" OWNER TO postgres;
 -- ddl-end --
+INSERT INTO games (name) VALUES('shop');

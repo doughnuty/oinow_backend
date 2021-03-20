@@ -52,6 +52,7 @@ func (a *App) Run(addr string) {
 	login_user		(user_id)						success				if user not in db register as new DONE
 	friends			(contacts)						names and scores									  DONE
 	create_game		(game name)						success				add game to db if absent          DONE
+	buy_pretty		(style, price, aituID)			style and newscore	substract price from score and upd style
 */
 
 func (a *App) handleRequests() {
@@ -62,6 +63,7 @@ func (a *App) handleRequests() {
 	a.Router.HandleFunc("/rest/oinow/friends/", a.getFriendsList).Methods("POST")
 	a.Router.HandleFunc("/rest/oinow/new_game/", a.generateRoom).Methods("GET")
 	a.Router.HandleFunc("/rest/oinow/profile/results/", a.getGameResults).Methods("POST")
+	a.Router.HandleFunc("/rest/oinow/profile/shop", a.buyPretty).Methods("POST")
 }
 
 func (a *App) getUserScore(w http.ResponseWriter, r *http.Request) {
@@ -205,6 +207,39 @@ func (a *App) getGameResults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusCreated, `Success`)
+}
+
+func (a *App) buyPretty(w http.ResponseWriter, r *http.Request) {
+	type receipt struct {
+		AituID string
+		Price  float64
+		Style  int
+	}
+
+	var rec receipt
+
+	decoder := json.NewDecoder(r.Body)
+
+	if err := decoder.Decode(&rec); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	defer r.Body.Close()
+
+	user := user{AituID: rec.AituID, Style: rec.Style}
+
+	if err := user.UpdateStyle(a.DB, rec.Price); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if err := user.getUserbyID(a.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, user)
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"

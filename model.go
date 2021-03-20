@@ -2,6 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"sort"
 )
 
@@ -79,7 +81,12 @@ func (u *user) getScores(db *sql.DB) error {
 	return nil
 }
 
+func (u *user) getUserbyID(db *sql.DB) error {
+	return db.QueryRow("SELECT id, name, surname FROM users WHERE aituid=$1", u.AituID).Scan(&u.ID, &u.Name, &u.Surname)
+}
+
 func getLeaderboard(db *sql.DB) ([]user, error) {
+
 	rows, err := db.Query("SELECT id, name, surname, aituid FROM users")
 	if err != nil {
 		return nil, err
@@ -121,5 +128,31 @@ func (u *user) getScoreFromContacts(db *sql.DB) error {
 		}
 		u.Score += score
 	}
+	return nil
+}
+
+func (u *user) UpdateStyle(db *sql.DB, score float64) error {
+	game := games{Name: "shop"}
+	game.getGameID(db)
+	u.getUserID(db)
+	u.getScores(db)
+
+	if u.Score < score {
+		fmt.Println(u.Score)
+		return errors.New("not enough balance")
+	}
+
+	_, err := db.Exec("INSERT INTO game_scores(userid, gameid, score) VALUES($1, $2, $3)", u.ID, game.ID, score*(-1))
+	if err != nil {
+		return err
+	}
+
+	u.getScores(db)
+
+	_, err = db.Exec("UPDATE users SET style=$1 WHERE aituID = $2", u.Style, u.AituID)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
