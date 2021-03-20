@@ -40,20 +40,23 @@ func (a *App) Run(addr string) {
 
 /*
 	GET			SEND TO USER		PROCESS
-	leaderboard	(name and score)	select from db
-	score		(profile)			select from db
+	leaderboard	(name and score)	select from db						DONE
+	score		(profile)			select from db 						DONE
 	room_id 	(id)				generate | add to db | send to user
 */
 /*
 	POST 			SEND TO BACK					RECEIVE				PROCESS
-	game_results	(user_phone, game_name, score)	success
-	login_user		(phone)							success				if user not in db register as new
+	game_results	(user_id, game_name, score)		success
+	login_user		(user_id)						success				if user not in db register as new DONE
 	friends			(contacts)						names and scores
+	create_game		(game name)						success				add game to db if absent          DONE
 */
 func (a *App) handleRequests() {
 	a.Router.HandleFunc("/rest/oinaw/profile/{aituID}", a.getUserScore).Methods("GET")
 	a.Router.HandleFunc("/rest/oinaw/profile/", a.sendUserID).Methods("POST")
 	a.Router.HandleFunc("/rest/oinaw/games/", a.createGame).Methods("POST")
+	a.Router.HandleFunc("/rest/oinaw/leaderboard/", a.getLeaderboard).Methods("GET")
+	a.Router.HandleFunc("/rest/oinaw/friends/", a.getFriendsList).Methods("POST")
 }
 
 func (a *App) getUserScore(w http.ResponseWriter, r *http.Request) {
@@ -71,13 +74,24 @@ func (a *App) getUserScore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := a.DB.QueryRow("SELECT score FROM game_scores WHERE userID=$1 AND gameID=1", u.ID).Scan(&u.Score)
+	err := u.getScores(a.DB)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	respondWithJSON(w, http.StatusOK, u.Score)
+}
+
+func (a *App) getLeaderboard(w http.ResponseWriter, r *http.Request) {
+	users, err := getLeaderboard(a.DB)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, users)
+
 }
 
 func (a *App) sendUserID(w http.ResponseWriter, r *http.Request) {
@@ -114,7 +128,7 @@ func (a *App) createGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// what is best to send?
-	respondWithJSON(w, http.StatusCreated, g.ID)
+	respondWithJSON(w, http.StatusCreated, `Success`)
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {
