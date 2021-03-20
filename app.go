@@ -234,11 +234,6 @@ func (a *App) buyPretty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := user.getUserbyID(a.DB); err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
 	respondWithJSON(w, http.StatusOK, user)
 }
 

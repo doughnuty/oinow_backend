@@ -70,6 +70,7 @@ func (u *user) getScores(db *sql.DB) error {
 	}
 	defer rows.Close()
 
+	u.Score = 0.0
 	for rows.Next() {
 		score := 0.0
 		if err := rows.Scan(&score); err != nil {
@@ -144,6 +145,7 @@ func (u *user) UpdateStyle(db *sql.DB, score float64) error {
 
 	_, err := db.Exec("INSERT INTO game_scores(userid, gameid, score) VALUES($1, $2, $3)", u.ID, game.ID, score*(-1))
 	if err != nil {
+		u.getUserbyID(db)
 		return err
 	}
 
