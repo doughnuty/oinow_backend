@@ -38,21 +38,28 @@ func (a *App) Run(addr string) {
 	log.Fatal(http.ListenAndServe(addr, a.Router))
 }
 
+/*
+	GET			SEND TO USER		PROCESS
+	leaderboard	(name and score)	select from db
+	score		(profile)			select from db
+	room_id 	(id)				generate | add to db | send to user
+*/
+/*
+	POST 			SEND TO BACK					RECEIVE				PROCESS
+	game_results	(user_phone, game_name, score)	success
+	login_user		(phone)							success				if user not in db register as new
+	friends			(contacts)						names and scores
+*/
 func (a *App) handleRequests() {
 	a.Router.HandleFunc("/rest/oinaw/profile/{aituID}", a.getUserScore).Methods("GET")
-	// 	myRouter.HandleFunc("/articles", returnAllArticles)
-	// 	myRouter.HandleFunc("/article", createNewArticle).Methods("POST")
-	// 	myRouter.HandleFunc("/article/{id}", deleteArticle).Methods("DELETE")
-	// 	myRouter.HandleFunc("/article/{id}", returnSingleArticle)
-	// 	log.Fatal(http.ListenAndServe(":10000", myRouter))
-	//
+	a.Router.HandleFunc("/rest/oinaw/profile/", a.sendUserID).Methods("POST")
 }
 
 func (a *App) getUserScore(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	aituID := vars["aituID"]
 
-	u := user{aituID: aituID}
+	u := user{AituID: aituID}
 	if err := u.getUserID(a.DB); err != nil {
 		switch err {
 		case sql.ErrNoRows:
@@ -63,14 +70,31 @@ func (a *App) getUserScore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// score := 0.0
-	// err := a.DB.QueryRow("SELECT score FROM game_scores WHERE userID=$1 AND gameID=1", u.ID).Scan(&score)
-	// if err != nil {
-	// 	respondWithError(w, http.StatusInternalServerError, err.Error())
-	// 	return
-	// }
+	err := a.DB.QueryRow("SELECT score FROM game_scores WHERE userID=$1 AND gameID=1", u.ID).Scan(&u.Score)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 
 	respondWithJSON(w, http.StatusOK, u)
+}
+
+func (a *App) sendUserID(w http.ResponseWriter, r *http.Request) {
+	var u user
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&u); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+	fmt.Println("creating profile with user", u.ID, "|", u.Name, "|", u.AituID, "|", u.Score)
+	if err := u.createUserProfile(a.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// what is best to send?
+	respondWithJSON(w, http.StatusCreated, u.Score)
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {
