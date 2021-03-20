@@ -43,12 +43,13 @@ func (game *games) createGameConfig(db *sql.DB) error {
 	return nil
 }
 
-func (game *games) getGameScore(db *sql.DB) error {
+func (game *games) getGameID(db *sql.DB) error {
 	return db.QueryRow("SELECT id FROM games WHERE name=$1", game.Name).Scan(&game.ID)
 }
 
 func (u *user) createUserProfile(db *sql.DB) error {
-	_, err := db.Exec("INSERT INTO users (aituID, name, surname) SELECT $1, $2, $3 WHERE NOT EXISTS (SELECT id FROM users WHERE aituID=$1)", u.AituID, u.Name, u.Surname)
+	_, err := db.Exec("INSERT INTO users (aituID, name, surname, phone, style) SELECT $1, $2, $3, $4, 0 WHERE NOT EXISTS (SELECT id FROM users WHERE aituID=$1)",
+		u.AituID, u.Name, u.Surname, u.Phone)
 	if err != nil {
 		return err
 	}

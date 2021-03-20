@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -48,15 +49,17 @@ func (a *App) Run(addr string) {
 	POST 			SEND TO BACK					RECEIVE				PROCESS
 	game_results	(user_id, game_name, score)		success
 	login_user		(user_id)						success				if user not in db register as new DONE
-	friends			(contacts)						names and scores
+	friends			(contacts)						names and scores									  DONE
 	create_game		(game name)						success				add game to db if absent          DONE
 */
 func (a *App) handleRequests() {
-	a.Router.HandleFunc("/rest/oinaw/profile/{aituID}", a.getUserScore).Methods("GET")
-	a.Router.HandleFunc("/rest/oinaw/profile/", a.sendUserID).Methods("POST")
-	a.Router.HandleFunc("/rest/oinaw/games/", a.createGame).Methods("POST")
-	a.Router.HandleFunc("/rest/oinaw/leaderboard/", a.getLeaderboard).Methods("GET")
-	a.Router.HandleFunc("/rest/oinaw/friends/", a.getFriendsList).Methods("POST")
+	a.Router.HandleFunc("/rest/oinow/profile/{aituID}", a.getUserScore).Methods("GET")
+	a.Router.HandleFunc("/rest/oinow/profile/", a.sendUserID).Methods("POST")
+	a.Router.HandleFunc("/rest/oinow/games/", a.createGame).Methods("POST")
+	a.Router.HandleFunc("/rest/oinow/leaderboard/", a.getLeaderboard).Methods("GET")
+	a.Router.HandleFunc("/rest/oinow/friends/", a.getFriendsList).Methods("POST")
+	a.Router.HandleFunc("/rest/oinow/new_game/", a.generateRoom).Methods("GET")
+	a.Router.HandleFunc("/rest/oinow/profile/results/", a.getGameResults).Methods("POST")
 }
 
 func (a *App) getUserScore(w http.ResponseWriter, r *http.Request) {
@@ -91,7 +94,6 @@ func (a *App) sendUserID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-	fmt.Println("creating profile with user", u.ID, "|", u.Name, "|", u.AituID, "|", u.Score)
 	if err := u.createUserProfile(a.DB); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -147,7 +149,60 @@ func (a *App) getFriendsList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusCreated, users)
+}
 
+func (a *App) generateRoom(w http.ResponseWriter, r *http.Request) {
+	randStr := RandStringBytes(6)
+
+	respondWithJSON(w, http.StatusCreated, randStr)
+}
+
+func (a *App) getGameResults(w http.ResponseWriter, r *http.Request) {
+
+	type gameresults struct {
+		User, Game_name string
+		Score           int
+	}
+
+	var result gameresults
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&result); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+
+	user := user{AituID: result.User}
+	if err := user.getUserID(a.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	game := games{Name: result.Game_name}
+	if err := game.getGameID(a.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	scores := game_scores{
+		UserID: user.ID,
+		GameID: game.ID,
+		Score:  result.Score}
+
+	if err := scores.updateUserScore(a.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+func RandStringBytes(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {
