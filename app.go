@@ -83,17 +83,6 @@ func (a *App) getUserScore(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, u.Score)
 }
 
-func (a *App) getLeaderboard(w http.ResponseWriter, r *http.Request) {
-	users, err := getLeaderboard(a.DB)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	respondWithJSON(w, http.StatusOK, users)
-
-}
-
 func (a *App) sendUserID(w http.ResponseWriter, r *http.Request) {
 	var u user
 	decoder := json.NewDecoder(r.Body)
@@ -115,13 +104,11 @@ func (a *App) sendUserID(w http.ResponseWriter, r *http.Request) {
 func (a *App) createGame(w http.ResponseWriter, r *http.Request) {
 	var g games
 	decoder := json.NewDecoder(r.Body)
-	fmt.Println("creating game1", g.Name)
 	if err := decoder.Decode(&g); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 	defer r.Body.Close()
-	fmt.Println("creating game", g.Name)
 	if err := g.createGameConfig(a.DB); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -129,6 +116,38 @@ func (a *App) createGame(w http.ResponseWriter, r *http.Request) {
 
 	// what is best to send?
 	respondWithJSON(w, http.StatusCreated, `Success`)
+}
+
+func (a *App) getLeaderboard(w http.ResponseWriter, r *http.Request) {
+	users, err := getLeaderboard(a.DB)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, users)
+}
+
+func (a *App) getFriendsList(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+
+	users := []user{}
+
+	if err := decoder.Decode(&users); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+
+	for id := range users {
+		if err := users[id].getScoreFromContacts(a.DB); err != nil {
+			respondWithError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
+	respondWithJSON(w, http.StatusCreated, users)
+
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {

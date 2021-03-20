@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS public."users" (
   id serial NOT NULL,
   aituID text,
   name text,
+  phone text UNIQUE,
   CONSTRAINT "users_pk" PRIMARY KEY (id)
 );
 -- ddl-end --

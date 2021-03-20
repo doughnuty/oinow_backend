@@ -2,13 +2,17 @@ package main
 
 import (
 	"database/sql"
+	"sort"
 )
 
 type user struct {
-	ID     int     `json:"id"`
-	Name   string  `json:"name"`
-	AituID string  `json:"aituID"`
-	Score  float64 `json:"score"`
+	ID      int     `json:"id"`
+	Name    string  `json:"first_name"`
+	Surname string  `json:"last_name"`
+	AituID  string  `json:"aituID"`
+	Score   float64 `json:"score"`
+	Style   int     `json:"style"`
+	Phone   string  `json:"phone"`
 }
 
 type game_scores struct {
@@ -44,7 +48,7 @@ func (game *games) getGameScore(db *sql.DB) error {
 }
 
 func (u *user) createUserProfile(db *sql.DB) error {
-	_, err := db.Exec("INSERT INTO users (aituID, name) SELECT $1, $2 WHERE NOT EXISTS (SELECT id FROM users WHERE aituID=$1)", u.AituID, u.Name)
+	_, err := db.Exec("INSERT INTO users (aituID, name, surname) SELECT $1, $2, $3 WHERE NOT EXISTS (SELECT id FROM users WHERE aituID=$1)", u.AituID, u.Name, u.Surname)
 	if err != nil {
 		return err
 	}
@@ -57,7 +61,7 @@ func (u *user) createUserProfile(db *sql.DB) error {
 }
 
 func (u *user) getScores(db *sql.DB) error {
-	rows, err := db.Query("SELECT score FROM game_scores LEFT JOIN users ON game_scores.userID=users.id")
+	rows, err := db.Query("SELECT score FROM game_scores WHERE userID=$1", u.ID)
 	if err != nil {
 		return err
 	}
@@ -75,7 +79,7 @@ func (u *user) getScores(db *sql.DB) error {
 }
 
 func getLeaderboard(db *sql.DB) ([]user, error) {
-	rows, err := db.Query("SELECT id, name, aituid FROM users")
+	rows, err := db.Query("SELECT id, name, surname, aituid FROM users")
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +89,7 @@ func getLeaderboard(db *sql.DB) ([]user, error) {
 
 	for rows.Next() {
 		var u user
-		if err := rows.Scan(&u.ID, &u.Name, &u.AituID); err != nil {
+		if err := rows.Scan(&u.ID, &u.Name, &u.Surname, &u.AituID); err != nil {
 			return nil, err
 		}
 
@@ -94,7 +98,27 @@ func getLeaderboard(db *sql.DB) ([]user, error) {
 		}
 
 		users = append(users, u)
+		sort.Slice(users, func(i, j int) bool {
+			return users[i].Score < users[j].Score
+		})
 	}
 
 	return users, nil
+}
+
+func (u *user) getScoreFromContacts(db *sql.DB) error {
+	rows, err := db.Query("SELECT score FROM game_scores LEFT JOIN users ON userid=users.id WHERE phone=$1", u.Phone)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		score := 0.0
+		if err := rows.Scan(&score); err != nil {
+			return err
+		}
+		u.Score += score
+	}
+	return nil
 }
