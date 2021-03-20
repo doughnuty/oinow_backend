@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"sort"
 
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
@@ -43,15 +44,16 @@ func (a *App) Run(addr string) {
 	GET			SEND TO USER		PROCESS
 	leaderboard	(name and score)	select from db						DONE
 	score		(profile)			select from db 						DONE
-	room_id 	(id)				generate | add to db | send to user
+	room_id 	(id)				generate | add to db | send to user DONE
 */
 /*
 	POST 			SEND TO BACK					RECEIVE				PROCESS
-	game_results	(user_id, game_name, score)		success
+	game_results	(user_id, game_name, score)		success												  DONE
 	login_user		(user_id)						success				if user not in db register as new DONE
 	friends			(contacts)						names and scores									  DONE
 	create_game		(game name)						success				add game to db if absent          DONE
 */
+
 func (a *App) handleRequests() {
 	a.Router.HandleFunc("/rest/oinow/profile/{aituID}", a.getUserScore).Methods("GET")
 	a.Router.HandleFunc("/rest/oinow/profile/", a.sendUserID).Methods("POST")
@@ -95,6 +97,11 @@ func (a *App) sendUserID(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 	if err := u.createUserProfile(a.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if err := u.getScores(a.DB); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -148,6 +155,9 @@ func (a *App) getFriendsList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	sort.Slice(users, func(i, j int) bool {
+		return users[i].Score > users[j].Score
+	})
 	respondWithJSON(w, http.StatusCreated, users)
 }
 
@@ -193,6 +203,8 @@ func (a *App) getGameResults(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	respondWithJSON(w, http.StatusCreated, `Success`)
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"

@@ -32,7 +32,7 @@ func (u *user) getUserID(db *sql.DB) error {
 }
 
 func (g *game_scores) updateUserScore(db *sql.DB) error {
-	_, err := db.Exec("UPDATE game_scores SET score=$1 WHERE userID=$2 AND gameID=$3", g.Score, g.UserID, g.GameID)
+	_, err := db.Exec("INSERT INTO game_scores(userid, gameid, score) VALUES($1, $2, $3)", g.UserID, g.GameID, g.Score)
 
 	return err
 }
@@ -100,7 +100,7 @@ func getLeaderboard(db *sql.DB) ([]user, error) {
 
 		users = append(users, u)
 		sort.Slice(users, func(i, j int) bool {
-			return users[i].Score < users[j].Score
+			return users[i].Score > users[j].Score
 		})
 	}
 
