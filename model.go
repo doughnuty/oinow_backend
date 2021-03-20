@@ -5,9 +5,9 @@ import (
 )
 
 type user struct {
-	ID    int    `json:"id"`
-	name  string `json:"name"`
-	Phone string `json:"phone"`
+	ID     int    `json:"id"`
+	name   string `json:"name"`
+	aituID string `json:"aituID"`
 }
 
 type game_scores struct {
@@ -17,13 +17,13 @@ type game_scores struct {
 	score  int `json:"score"`
 }
 
-type game struct {
+type games struct {
 	ID   int    `json:"id"`
 	name string `json:"name"`
 }
 
 func (u *user) getUserID(db *sql.DB) error {
-	return db.QueryRow("SELECT id FROM users WHERE phone=$1", u.Phone).Scan(&u.ID)
+	return db.QueryRow("SELECT id FROM users WHERE aituID=$1", u.aituID).Scan(&u.ID)
 }
 
 func (g *game_scores) updateUserScore(db *sql.DB) error {
@@ -34,8 +34,8 @@ func (g *game_scores) updateUserScore(db *sql.DB) error {
 
 func (u *user) createUserProfile(db *sql.DB) error {
 	err := db.QueryRow(
-		"INSERT INTO users(phone) VALUES($1) RETURNING id",
-		u.Phone).Scan(&u.ID)
+		"INSERT INTO users(aituID) VALUES($1) RETURNING id",
+		u.aituID).Scan(&u.ID)
 
 	if err != nil {
 		return err

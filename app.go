@@ -39,7 +39,7 @@ func (a *App) Run(addr string) {
 }
 
 func (a *App) handleRequests() {
-	a.Router.HandleFunc("/rest/oinaw/profile/{phone}", a.getUserScore).Methods("GET")
+	a.Router.HandleFunc("/rest/oinaw/profile/{aituID}", a.getUserScore).Methods("GET")
 	// 	myRouter.HandleFunc("/articles", returnAllArticles)
 	// 	myRouter.HandleFunc("/article", createNewArticle).Methods("POST")
 	// 	myRouter.HandleFunc("/article/{id}", deleteArticle).Methods("DELETE")
@@ -50,9 +50,9 @@ func (a *App) handleRequests() {
 
 func (a *App) getUserScore(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	phone := vars["phone"]
+	aituID := vars["aituID"]
 
-	u := user{Phone: phone}
+	u := user{aituID: aituID}
 	if err := u.getUserID(a.DB); err != nil {
 		switch err {
 		case sql.ErrNoRows:
@@ -63,7 +63,7 @@ func (a *App) getUserScore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// score := 0
+	// score := 0.0
 	// err := a.DB.QueryRow("SELECT score FROM game_scores WHERE userID=$1 AND gameID=1", u.ID).Scan(&score)
 	// if err != nil {
 	// 	respondWithError(w, http.StatusInternalServerError, err.Error())
