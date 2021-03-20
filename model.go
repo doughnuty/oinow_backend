@@ -33,6 +33,16 @@ func (g *game_scores) updateUserScore(db *sql.DB) error {
 	return err
 }
 
+func (game *games) createGameConfig(db *sql.DB) error {
+	_, _ = db.Exec("INSERT INTO games (name) VALUES($1)", game.Name)
+	err := db.QueryRow("SELECT id FROM games WHERE name=$1", game.Name).Scan(&game.ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (u *user) createUserProfile(db *sql.DB) error {
 	_, err := db.Exec("INSERT INTO users (aituID, name) SELECT $1, $2 WHERE NOT EXISTS (SELECT id FROM users WHERE aituID=$1)", u.AituID, u.Name)
 	if err != nil {

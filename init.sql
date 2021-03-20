@@ -12,7 +12,7 @@
 -- 
 -- object: public."Users" | type: TABLE --
 -- DROP TABLE IF EXISTS public."Users" CASCADE;
-CREATE TABLE IF NOT EXISTS "users" (
+CREATE TABLE IF NOT EXISTS public."users" (
   id serial NOT NULL,
   aituID text,
   name text,
@@ -23,9 +23,9 @@ CREATE TABLE IF NOT EXISTS "users" (
 -- ddl-end --
 -- object: public."Games" | type: TABLE --
 -- DROP TABLE IF EXISTS public."Games" CASCADE;
-CREATE TABLE IF NOT EXISTS "games" (
+CREATE TABLE IF NOT EXISTS public."games" (
   id serial NOT NULL,
-  name text,
+  name text UNIQUE,
   CONSTRAINT "games_pk" PRIMARY KEY (id)
 );
 -- ddl-end --
@@ -35,12 +35,12 @@ CREATE TABLE IF NOT EXISTS "games" (
 -- DROP TABLE IF EXISTS public."Score" CASCADE;
 CREATE TABLE IF NOT EXISTS "game_scores" (
   id serial NOT NULL,
-  "userID" int,
-  "gameID" int,
+  userID int,
+  gameID int,
   score float,
   CONSTRAINT "game_scores_pk" PRIMARY KEY (id),
-  CONSTRAINT "userID_fk" FOREIGN KEY ("userID") REFERENCES public."users"(id),
-  CONSTRAINT "gameID" FOREIGN KEY ("gameID") REFERENCES public."games"(id)
+  CONSTRAINT "userID_fk" FOREIGN KEY (userID) REFERENCES public."users"(id),
+  CONSTRAINT "gameID_fk" FOREIGN KEY (gameID) REFERENCES public."games"(id)
 );
 -- ddl-end --
 -- ALTER TABLE public."Score" OWNER TO postgres;

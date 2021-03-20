@@ -53,6 +53,7 @@ func (a *App) Run(addr string) {
 func (a *App) handleRequests() {
 	a.Router.HandleFunc("/rest/oinaw/profile/{aituID}", a.getUserScore).Methods("GET")
 	a.Router.HandleFunc("/rest/oinaw/profile/", a.sendUserID).Methods("POST")
+	a.Router.HandleFunc("/rest/oinaw/games/", a.createGame).Methods("POST")
 }
 
 func (a *App) getUserScore(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +64,7 @@ func (a *App) getUserScore(w http.ResponseWriter, r *http.Request) {
 	if err := u.getUserID(a.DB); err != nil {
 		switch err {
 		case sql.ErrNoRows:
-			respondWithError(w, http.StatusNotFound, "Product not found")
+			respondWithError(w, http.StatusNotFound, "User not found")
 		default:
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 		}
@@ -76,7 +77,7 @@ func (a *App) getUserScore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, u)
+	respondWithJSON(w, http.StatusOK, u.Score)
 }
 
 func (a *App) sendUserID(w http.ResponseWriter, r *http.Request) {
@@ -95,6 +96,25 @@ func (a *App) sendUserID(w http.ResponseWriter, r *http.Request) {
 
 	// what is best to send?
 	respondWithJSON(w, http.StatusCreated, u.Score)
+}
+
+func (a *App) createGame(w http.ResponseWriter, r *http.Request) {
+	var g games
+	decoder := json.NewDecoder(r.Body)
+	fmt.Println("creating game1", g.Name)
+	if err := decoder.Decode(&g); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+	fmt.Println("creating game", g.Name)
+	if err := g.createGameConfig(a.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// what is best to send?
+	respondWithJSON(w, http.StatusCreated, g.ID)
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {
