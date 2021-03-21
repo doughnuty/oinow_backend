@@ -42,20 +42,26 @@ func (a *App) Run(addr string) {
 
 /*
 	GET			SEND TO USER		PROCESS
-	leaderboard	(name and score)	select from db						DONE
-	score		(profile)			select from db 						DONE
+	leaderboard	(name and score)	select from db						DONE	FRONT
+	score		(profile)			select from db 						DONE	FRONT
 	room_id 	(id)				generate | add to db | send to user DONE
 */
 /*
 	POST 			SEND TO BACK					RECEIVE				PROCESS
 	game_results	(user_id, game_name, score)		success												  DONE
-	login_user		(user_id)						success				if user not in db register as new DONE
-	friends			(contacts)						names and scores									  DONE
+	login_user		(user_id)						success				if user not in db register as new DONE	FRONT
+	friends			(contacts)						names and scores									  DONE	FRONT
 	create_game		(game name)						success				add game to db if absent          DONE
-	buy_pretty		(style, price, aituID)			style and newscore	substract price from score and upd style
+	buy_pretty		(style, price, aituID)			style and newscore	substract price from score and upd style FRONT
 */
 
 func (a *App) handleRequests() {
+	a.Router.Use(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			(w).Header().Set("Access-Control-Allow-Origin", "*")
+			h.ServeHTTP(w, r)
+		})
+	})
 	a.Router.HandleFunc("/rest/oinow/profile/{aituID}", a.getUserScore).Methods("GET")
 	a.Router.HandleFunc("/rest/oinow/profile/", a.sendUserID).Methods("POST")
 	a.Router.HandleFunc("/rest/oinow/games/", a.createGame).Methods("POST")
@@ -63,10 +69,11 @@ func (a *App) handleRequests() {
 	a.Router.HandleFunc("/rest/oinow/friends/", a.getFriendsList).Methods("POST")
 	a.Router.HandleFunc("/rest/oinow/new_game/", a.generateRoom).Methods("GET")
 	a.Router.HandleFunc("/rest/oinow/profile/results/", a.getGameResults).Methods("POST")
-	a.Router.HandleFunc("/rest/oinow/profile/shop", a.buyPretty).Methods("POST")
+	a.Router.HandleFunc("/rest/oinow/profile/shop/", a.buyPretty).Methods("POST")
 }
 
 func (a *App) getUserScore(w http.ResponseWriter, r *http.Request) {
+
 	vars := mux.Vars(r)
 	aituID := vars["aituID"]
 
@@ -87,7 +94,7 @@ func (a *App) getUserScore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, u.Score)
+	respondWithJSON(w, http.StatusOK, u)
 }
 
 func (a *App) sendUserID(w http.ResponseWriter, r *http.Request) {
@@ -109,7 +116,7 @@ func (a *App) sendUserID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// what is best to send?
-	respondWithJSON(w, http.StatusCreated, u.Score)
+	respondWithJSON(w, http.StatusCreated, u)
 }
 
 func (a *App) createGame(w http.ResponseWriter, r *http.Request) {
@@ -141,20 +148,27 @@ func (a *App) getLeaderboard(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) getFriendsList(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
-
+	type phoneBook struct {
+		First_name string `json:"first_name"`
+		Last_name  string `json:"last_name"`
+		Phone      string `json:"phone"`
+	}
+	contacts := []phoneBook{}
 	users := []user{}
-
-	if err := decoder.Decode(&users); err != nil {
+	if err := decoder.Decode(&contacts); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 	defer r.Body.Close()
 
-	for id := range users {
-		if err := users[id].getScoreFromContacts(a.DB); err != nil {
+	for _, contact := range contacts {
+		u := user{Phone: contact.Phone, Surname: contact.Last_name, Name: contact.First_name}
+		if err := u.getScoreFromContacts(a.DB); err != nil {
 			respondWithError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+
+		users = append(users, u)
 	}
 
 	sort.Slice(users, func(i, j int) bool {
@@ -184,18 +198,19 @@ func (a *App) getGameResults(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
+	fmt.Println("1", result.User)
 	user := user{AituID: result.User}
 	if err := user.getUserID(a.DB); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-
+	fmt.Println("2")
 	game := games{Name: result.Game_name}
 	if err := game.getGameID(a.DB); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-
+	fmt.Println("3")
 	scores := game_scores{
 		UserID: user.ID,
 		GameID: game.ID,
@@ -257,4 +272,8 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	w.Write(response)
+}
+
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 }

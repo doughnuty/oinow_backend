@@ -9,8 +9,8 @@ import (
 
 type user struct {
 	ID      int     `json:"id"`
-	Name    string  `json:"first_name"`
-	Surname string  `json:"last_name"`
+	Name    string  `json:"name"`
+	Surname string  `json:"lastname"`
 	AituID  string  `json:"aituID"`
 	Score   float64 `json:"score"`
 	Style   int     `json:"style"`
