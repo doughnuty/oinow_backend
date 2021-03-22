@@ -50,7 +50,7 @@ func (game *games) getGameID(db *sql.DB) error {
 }
 
 func (u *user) createUserProfile(db *sql.DB) error {
-	_, err := db.Exec("INSERT INTO users (aituID, name, surname, phone, style) SELECT $1, $2, $3, $4, 0 WHERE NOT EXISTS (SELECT id FROM users WHERE aituID=$1)",
+	tx, err := db.Exec("INSERT INTO users (aituID, name, surname, phone, style) SELECT $1, $2, $3, $4, 0 WHERE NOT EXISTS (SELECT id FROM users WHERE aituID=$1)",
 		u.AituID, u.Name, u.Surname, u.Phone)
 	if err != nil {
 		return err
@@ -58,6 +58,17 @@ func (u *user) createUserProfile(db *sql.DB) error {
 	err = db.QueryRow("SELECT id FROM users WHERE aituID=$1", u.AituID).Scan(&u.ID)
 	if err != nil {
 		return err
+	}
+
+	rowsAffected, err := tx.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected != 0 {
+		_, err = db.Exec("INSERT INTO game_scores(score, userID, gameid) values(50, $1, 1)", u.ID)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

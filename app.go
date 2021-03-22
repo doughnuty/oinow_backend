@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"sort"
 
+	"github.com/doughnuty/oinow_backend/wsHandler"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 )
@@ -62,6 +63,7 @@ func (a *App) handleRequests() {
 			h.ServeHTTP(w, r)
 		})
 	})
+	a.Router.HandleFunc("/ws", wsHandler.WsHandler)
 	a.Router.HandleFunc("/rest/oinow/profile/{aituID}", a.getUserScore).Methods("GET")
 	a.Router.HandleFunc("/rest/oinow/profile/", a.sendUserID).Methods("POST")
 	a.Router.HandleFunc("/rest/oinow/games/", a.createGame).Methods("POST")

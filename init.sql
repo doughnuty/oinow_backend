@@ -16,7 +16,9 @@ CREATE TABLE IF NOT EXISTS public."users" (
   id serial NOT NULL,
   aituID text,
   name text,
+  surname text,
   phone text UNIQUE,
+  style int,
   CONSTRAINT "users_pk" PRIMARY KEY (id)
 );
 -- ddl-end --
@@ -46,4 +48,7 @@ CREATE TABLE IF NOT EXISTS "game_scores" (
 -- ddl-end --
 -- ALTER TABLE public."Score" OWNER TO postgres;
 -- ddl-end --
-INSERT INTO games (name) VALUES('shop');
+INSERT INTO games (name)
+VALUES('shop');
+INSERT INTO games (name)
+VALUES('clicker');
