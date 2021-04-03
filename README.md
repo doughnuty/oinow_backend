@@ -1,5 +1,6 @@
 # REST API BACKEND
 #### for BTSD HackNU oinow web app
+https://github.com/Zhalkhas/hacknu_react_aitu
 
 ## UserInit
 Инициализировать пользователя. Данная команда нужна при первой авторизации юзера и дальнейшей ассоциации его aituID с номером телефона. Эта самая ассоциация в свою очередь нужна в связи с тем что метод getContacts() не передает aituID пользователей из контактной книги.
